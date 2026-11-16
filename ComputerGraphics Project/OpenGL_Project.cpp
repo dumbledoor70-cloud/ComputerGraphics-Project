@@ -76,22 +76,27 @@ namespace {
 	Model ak47;
 	glm::vec3 pos = glm::vec3(-0.466667, -0.4, 0.8);
 
+	// 마우스 커서 움직임
 	bool MouseEntered = false;
 	double lastX, lastY;
 
 	bool move = false;
 	float frontState, leftState;
 	constexpr float meterpersec = 1.94f;
+
+	// 점프 구현하기
+	bool isJump = false;
+	float delta = 0.0f;
 }
 
 namespace {
-	void drawFloor(const Shader& shader) {
+	void drawFloor(const Shader& shader, float size = 50.0f) {
 		static glm::vec3 color = glm::vec3(0.0f, 1.0f, 0.0f);
 		GLfloat vertices[] = {
-			50.0f, 0.0f, 50.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-			50.0f, 0.0f, -50.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-			-50.0f, 0.0f, -50.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-			-50.0f, 0.0f, 50.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+			size, 0.0f, size, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+			size, 0.0f, -size, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+			-size, 0.0f, -size, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+			-size, 0.0f, size, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
 		};
 		GLuint indices[] = {
 			0,1,2,
@@ -170,9 +175,8 @@ void OpenGL::rendering() {
 	ak47.SetPos(pCamera->eye + glm::vec3(mat * glm::vec4(pos, 1.0f)));
 
 	// 그리기
-	drawFloor(shader);
+	drawFloor(shader, 1024);
 	ak47.draw(shader);
-
 
 	glfwSwapBuffers(window);
 }
@@ -189,6 +193,17 @@ void OpenGL::Timer(double time)
 		pCamera->eye += frontState * glm::vec3(front.x, 0, front.z);
 		front = glm::rotate(glm::mat4(1.0f), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(front, 1.0f);
 		pCamera->eye += leftState * glm::vec3(front.x, 0, front.z);
+
+		if (isJump) {
+			pCamera->eye += glm::vec3(0.0f, glm::cos(delta), 0.0f);
+			delta += glm::radians(5.0f);
+
+			if (delta >= glm::radians(180.0f)) {
+				pCamera->eye = glm::vec3(pCamera->eye.x, 2.0f, pCamera->eye.z);
+				isJump = false;
+			}
+		}
+		std::cout << "(" << pCamera->eye.x << ", " << pCamera->eye.y << ", " << pCamera->eye.z << ")\n";
 	}
 }
 
@@ -309,7 +324,12 @@ void OpenGL::CharCallback(GLFWwindow* window, unsigned int codepoint)
 		isPerspective ^= 1;
 		UpdateProjection();
 		break;
-
+	case ' ':
+		if (not isJump) {
+			isJump = true;
+			delta = 0.0f;
+		}
+		break;
 	}
 }
 void OpenGL::FramebufferSizeCallback(GLFWwindow* window, int width, int height) {}
