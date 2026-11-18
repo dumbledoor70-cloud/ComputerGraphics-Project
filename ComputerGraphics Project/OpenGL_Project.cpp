@@ -35,6 +35,8 @@ struct Texture {
 		}
 		else {
 			std::cout << "텍스처 로드 실패: " << filename << std::endl;
+			std::cerr << "[ERROR] Texture load failed: " << file.data()
+				<< " | Reason: " << stbi_failure_reason() << std::endl;
 		}
 		stbi_image_free(data);
 	}
@@ -106,7 +108,7 @@ private:
 class Bullet : public Model {
 public:
 	Bullet(glm::vec3 pos, glm::vec3 dir)
-		: Model("object\\Sphere.obj", pos, glm::vec3(0.02f), glm::vec3(0.7f)), direct{dir}
+		: Model("object\\Sphere.obj", pos, glm::vec3(0.05f), glm::vec3(0.7f)), direct{dir}
 	{
 
 	}
@@ -120,7 +122,7 @@ private:
 
 namespace {
 	Shader shader;
-	Texture ak47Text, floorText;
+	Texture ak47Text, floorText, bulletText;
 
 	bool timer = true;
 	double fps = 60;
@@ -132,7 +134,7 @@ namespace {
 
 	Model ak47;
 	glm::vec3 aniPos = glm::vec3();
-	glm::vec3 pos = glm::vec3(-0.466667, -0.4, 0.8);
+	glm::vec3 pos = glm::vec3(-0.8, -0.6, 1.6);
 
 	// 마우스 커서 움직임
 	bool MouseEntered = false;
@@ -210,13 +212,14 @@ void OpenGL::startPractice()
 	shader = Shader("vertex.glsl", "fragment.glsl");
 	ak47Text = Texture("image\\ak47.png");
 	floorText = Texture("image\\stonefloor.png");
+	bulletText = Texture("image\\bullet.png");
 
 	EnableState(GL_DEPTH_TEST);
 	EnableState(GL_CULL_FACE);
-	pCamera = std::make_unique<Camera>(Camera(glm::vec3(0.0, 2.0, 0.0)));
+	pCamera = std::make_unique<Camera>(Camera(glm::vec3(0.0, 4.0, 0.0)));
 
 	lightPos = glm::vec3(0.0f, 5.0f, 0.0f);
-	ak47 = Model("Object\\ak47.obj", pCamera->eye + pos, glm::vec3(0.5f));
+	ak47 = Model("Object\\ak47.obj", pCamera->eye + pos, glm::vec3(1.0f));
 }
 
 void OpenGL::mainloop() {
@@ -255,6 +258,7 @@ void OpenGL::rendering() {
 	ak47Text.BindTexture();
 	ak47.draw(shader);
 
+	bulletText.BindTexture();
 	for (const auto& bullet : bullets) bullet.draw(shader);
 
 	glfwSwapBuffers(window);
@@ -280,7 +284,7 @@ void OpenGL::Timer(double time)
 
 		if (shooting and glm::vec3() == aniPos) {
 			aniPos = glm::vec3(0.0f, 0.0f, -0.3f);
-			bullets.push_back(Bullet(getAk47pos(pCamera->eye, glm::vec3(0.0f, 0.13f, 0.0f)), pCamera->getFront()));
+			bullets.push_back(Bullet(getAk47pos(pCamera->eye, glm::vec3(0.0f, 0.255f, 2.5f)), pCamera->getFront()));
 		}
 		else {
 			aniPos += glm::vec3(0.0f, 0.0f, 0.05f);
@@ -293,7 +297,7 @@ void OpenGL::Timer(double time)
 			delta += glm::radians(5.0f);
 
 			if (delta >= glm::radians(180.0f)) {
-				pCamera->eye = glm::vec3(pCamera->eye.x, 2.0f, pCamera->eye.z);
+				pCamera->eye = glm::vec3(pCamera->eye.x, 4.0f, pCamera->eye.z);
 				isJump = false;
 			}
 		}
