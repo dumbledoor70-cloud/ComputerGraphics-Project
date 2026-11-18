@@ -52,6 +52,7 @@ private:
 	void UpdateProjection();
 
 	void rendering();
+	void update();
 	void Timer(double);
 
 	static void keyboardCallbackEntry(GLFWwindow* window, int key, int scancode, int action, int mods);

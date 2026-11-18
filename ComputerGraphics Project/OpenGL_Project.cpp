@@ -2,12 +2,53 @@
 #include"Shader.h"
 #include"Camera.h"
 #include"Mesh.h"
-
+#define STB_IMAGE_IMPLEMENTATION
+#include<stb_image.h>
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glew32.lib")
 #pragma comment(lib, "glfw3.lib")
 #pragma comment(lib, "assimp-vc145-mt.lib")
+
+struct Texture {
+	Texture() = default;
+	Texture(std::string_view file) : filename{file.data()} 
+	{
+		glGenTextures(1, &texture);
+
+		unsigned char* data = stbi_load(filename.c_str(), &width, &height, &nrChannels, 0);
+		if (data) {
+			GLenum format = GL_RGB;
+			if (nrChannels == 4)
+				format = GL_RGBA;
+			glBindTexture(GL_TEXTURE_2D, texture);
+
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // 밉맵 사용 시 추천
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		else {
+			std::cout << "텍스처 로드 실패: " << filename << std::endl;
+		}
+		stbi_image_free(data);
+	}
+
+	void BindTexture() const {
+		glBindTexture(GL_TEXTURE_2D, texture);
+	}
+
+	std::string filename;
+	int width = 0;
+	int height = 0;
+	int nrChannels = 0;
+	unsigned int texture = 0;
+};
 
 class Model {
 public:
@@ -62,8 +103,24 @@ private:
 	GLfloat pitch, yaw, roll;
 };
 
+class Bullet : public Model {
+public:
+	Bullet(glm::vec3 pos, glm::vec3 dir)
+		: Model("object\\Sphere.obj", pos, glm::vec3(0.02f), glm::vec3(0.7f)), direct{dir}
+	{
+
+	}
+	void update() {
+		move(direct * 0.5f);
+	}
+private:
+	glm::vec3 direct;
+
+};
+
 namespace {
 	Shader shader;
+	Texture ak47Text, floorText;
 
 	bool timer = true;
 	double fps = 60;
@@ -74,29 +131,35 @@ namespace {
 	glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	Model ak47;
+	glm::vec3 aniPos = glm::vec3();
 	glm::vec3 pos = glm::vec3(-0.466667, -0.4, 0.8);
 
 	// 마우스 커서 움직임
 	bool MouseEntered = false;
 	double lastX, lastY;
 
-	bool move = false;
 	float frontState, leftState;
-	constexpr float meterpersec = 1.94f;
+	constexpr float meterpersec = 1.44f;
 
 	// 점프 구현하기
 	bool isJump = false;
 	float delta = 0.0f;
+
+	// 총 애니메이션
+	bool shooting = false; // 총 사격모션
+
+	std::vector<Bullet> bullets;
 }
 
 namespace {
 	void drawFloor(const Shader& shader, float size = 50.0f) {
+		if (size < 50.f) size = 50.f;
 		static glm::vec3 color = glm::vec3(0.0f, 1.0f, 0.0f);
 		GLfloat vertices[] = {
 			size, 0.0f, size, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-			size, 0.0f, -size, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-			-size, 0.0f, -size, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-			-size, 0.0f, size, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+			size, 0.0f, -size, 0.0f, 1.0f, 0.0f, size / 16, 0.0f,
+			-size, 0.0f, -size, 0.0f, 1.0f, 0.0f, size / 16, size / 16,
+			-size, 0.0f, size, 0.0f, 1.0f, 0.0f, 0.0f, size / 16,
 		};
 		GLuint indices[] = {
 			0,1,2,
@@ -109,6 +172,13 @@ namespace {
 		glUniformMatrix4fv(glGetUniformLocation(shader.GetShaderID(), "world"), 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
 
 		glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(GLuint), GL_UNSIGNED_INT, 0);
+	}
+
+	glm::vec3 getAk47pos(glm::vec3 eye, glm::vec3 delta = glm::vec3()) {
+		glm::mat4 mat = glm::mat4(1.0f);
+		mat = glm::rotate(mat, ak47.getYaw(), glm::vec3(0.0f, 1.0f, 0.0f));
+		mat = glm::rotate(mat, ak47.getPitch(), glm::vec3(1.0f, 0.0f, 0.0f));
+		return eye + glm::vec3(mat * glm::vec4(pos + aniPos + delta, 1.0f));
 	}
 }
 
@@ -131,11 +201,16 @@ void OpenGL::SetBuffer()
 
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+	
 }
 
 void OpenGL::startPractice()
 {
 	shader = Shader("vertex.glsl", "fragment.glsl");
+	ak47Text = Texture("image\\ak47.png");
+	floorText = Texture("image\\stonefloor.png");
+
 	EnableState(GL_DEPTH_TEST);
 	EnableState(GL_CULL_FACE);
 	pCamera = std::make_unique<Camera>(Camera(glm::vec3(0.0, 2.0, 0.0)));
@@ -146,13 +221,14 @@ void OpenGL::startPractice()
 
 void OpenGL::mainloop() {
 	while (!glfwWindowShouldClose(window)) {
-
 		if (timer) Timer(dtime);
+		update();
 		rendering();
 
 		glfwPollEvents();
 	}
 }
+
 
 // 렌더링 함수
 void OpenGL::rendering() {
@@ -161,24 +237,32 @@ void OpenGL::rendering() {
 
 	shader.UseProgram();
 
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(glGetUniformLocation(shader.GetShaderID(), "ourTexture"), 0);
+	
 	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "viewPos"), 1, glm::value_ptr(pCamera->eye));
 	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightColor"), 1, glm::value_ptr(glm::vec3(1.0f)));
 	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightPos"), 1, glm::value_ptr(lightPos));
 
 	glUniformMatrix4fv(glGetUniformLocation(shader.GetShaderID(), "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 	glUniformMatrix4fv(glGetUniformLocation(shader.GetShaderID(), "view"), 1, GL_FALSE, glm::value_ptr(pCamera->getViewMatrix()));
-	
-	// ak47를 화면에 고정시키기
-	glm::mat4 mat = glm::mat4(1.0f);
-	mat = glm::rotate(mat, ak47.getYaw(), glm::vec3(0.0f, 1.0f, 0.0f));
-	mat = glm::rotate(mat, ak47.getPitch(), glm::vec3(1.0f, 0.0f, 0.0f));
-	ak47.SetPos(pCamera->eye + glm::vec3(mat * glm::vec4(pos, 1.0f)));
 
 	// 그리기
+	floorText.BindTexture();
 	drawFloor(shader, 1024);
+
+
+	ak47Text.BindTexture();
 	ak47.draw(shader);
 
+	for (const auto& bullet : bullets) bullet.draw(shader);
+
 	glfwSwapBuffers(window);
+}
+
+void OpenGL::update() {
+	// ak47를 화면에 고정시키기
+	ak47.SetPos(getAk47pos(pCamera->eye));
 }
 
 void OpenGL::Timer(double time)
@@ -194,6 +278,16 @@ void OpenGL::Timer(double time)
 		front = glm::rotate(glm::mat4(1.0f), glm::radians(90.f), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(front, 1.0f);
 		pCamera->eye += leftState * glm::vec3(front.x, 0, front.z);
 
+		if (shooting and glm::vec3() == aniPos) {
+			aniPos = glm::vec3(0.0f, 0.0f, -0.3f);
+			bullets.push_back(Bullet(getAk47pos(pCamera->eye, glm::vec3(0.0f, 0.13f, 0.0f)), pCamera->getFront()));
+		}
+		else {
+			aniPos += glm::vec3(0.0f, 0.0f, 0.05f);
+			
+
+			if (aniPos.z >= 0.0f) aniPos = glm::vec3();
+		}
 		if (isJump) {
 			pCamera->eye += glm::vec3(0.0f, glm::cos(delta), 0.0f);
 			delta += glm::radians(5.0f);
@@ -203,7 +297,20 @@ void OpenGL::Timer(double time)
 				isJump = false;
 			}
 		}
-		std::cout << "(" << pCamera->eye.x << ", " << pCamera->eye.y << ", " << pCamera->eye.z << ")\n";
+		if (bullets.size() > 0) {
+
+			for (int i = 0; i < bullets.size(); ++i) {
+				bullets[i].update();
+				glm::vec3 pos = bullets[i].getPos();
+				if (abs(pos.x) >= 1024.f or
+					abs(pos.y) >= 100.f or
+					abs(pos.z) >= 1024.f) {
+					bullets.erase(bullets.begin() + i--);
+				}
+			}
+		}
+
+		// std::cout << "(" << pCamera->eye.x << ", " << pCamera->eye.y << ", " << pCamera->eye.z << ")\n";
 	}
 }
 
@@ -281,10 +388,24 @@ void OpenGL::keyboardCallback(GLFWwindow* window, int key, int scancode, int act
 }
 void OpenGL::MouseButtonCallback(GLFWwindow* window, int button, int action, int mods) 
 {
-	if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_NORMAL) {
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-		glfwGetCursorPos(window, &lastX, &lastY);
-		MouseEntered = true;
+	switch (button) {
+	case GLFW_MOUSE_BUTTON_LEFT:
+		if (action == GLFW_PRESS) {
+			if (MouseEntered) {
+				shooting = true;
+			}
+
+			if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_NORMAL) {
+				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+				glfwGetCursorPos(window, &lastX, &lastY);
+				MouseEntered = true;
+			}
+
+		}
+		else {
+			shooting = false;
+		}
+		break;
 	}
 }
 void OpenGL::CursorPosCallback(GLFWwindow* window, double xpos, double ypos) 

@@ -58,5 +58,11 @@
     <None Include="vertex.glsl">
       <Filter>shader</Filter>
     </None>
+    <None Include="BGvertex.glsl">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="BGfragment.glsl">
+      <Filter>shader</Filter>
+    </None>
   </ItemGroup>
 </Project>

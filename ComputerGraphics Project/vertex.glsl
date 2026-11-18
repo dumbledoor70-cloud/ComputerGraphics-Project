@@ -10,11 +10,12 @@ layout (location = 2) in vec2 vTextCoord;
 
 out vec3 FragNormal;
 out vec3 FragPos;
+out vec2 outTextCoord;
 
 void main()
 {
 	FragPos = vec3(world * vec4(vPos, 1.0));
 	FragNormal = vec3(transpose(inverse(world)) * vec4(vNormal, 1.0));
-
+	outTextCoord = vTextCoord;
 	gl_Position = projection * view * world * vec4(vPos, 1.0);
 }
