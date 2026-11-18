@@ -25,12 +25,14 @@
     <ClCompile Include="OpenGL_init.cpp" />
     <ClCompile Include="OpenGL_Project.cpp" />
     <ClCompile Include="Shader.cpp" />
+    <ClCompile Include="Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="OpenGL.h" />
     <ClInclude Include="Shader.h" />
+    <ClInclude Include="Texture.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="fragment.glsl" />
