@@ -48,6 +48,13 @@ int OpenGL::init_OpenGL(std::string_view title) {
 	std::cout << "completed initializing GLEW" << std::endl;
 	return 0;
 }
+
+void OpenGL::UpdateProjection()
+{
+	projection = pCamera->getPerspectiveMatrix(width / (float)height, Znear, Zfar);
+	ortho = pCamera->getOrthographicMatrix(0.0f, (float)width, 0.0f, (float)height, -1.f, 10.f);
+}
+
 void OpenGL::EnableState(GLenum state) const
 {
 	glEnable(state);

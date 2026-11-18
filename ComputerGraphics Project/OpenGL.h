@@ -6,6 +6,7 @@
 #include<vector>
 #include<random>
 #include<deque>
+#include<map>
 #include<algorithm>
 #include<gl/glew.h>
 #include<gl/glfw3.h>
@@ -23,8 +24,9 @@
 class OpenGL {
 public:
 	OpenGL() : window{ nullptr }, width{ 1200 }, height{ 800 }, 
-		projection{ glm::perspective(glm::radians(90.f), width / (float)height, 0.1f, 1000.f)}
-		, Znear{ 0.1f }, Zfar{ 1000.f } {}
+		projection{ glm::perspective(glm::radians(90.f), width / (float)height, 0.1f, 1000.f)},
+		ortho{ glm::ortho(0.0f, (float)width, 0.0f, (float)height, -1.f, 10.f) },
+		Znear{ 0.1f }, Zfar{ 1000.f } {}
 	~OpenGL();
 	int init_OpenGL(std::string_view title);
 	void SetViewport(GLint x, GLint y, GLsizei w, GLsizei h) { 
@@ -47,6 +49,7 @@ private:
 	std::unique_ptr<Camera> pCamera;
 	int width, height;
 	glm::mat4 projection;
+	glm::mat4 ortho;
 	GLfloat Znear, Zfar;
 
 	void UpdateProjection();

@@ -10,12 +10,18 @@ uniform vec3 outColor;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
 uniform vec3 ViewPos;
+uniform bool isText;
 
 uniform sampler2D ourTexture;
 
 void main()
 {
-	vec3 textureColor = texture(ourTexture,outTextCoord).rgb;
+	vec4 textureColor = texture(ourTexture,outTextCoord);
+
+	if (isText) {
+		FragColor = vec4(outColor * textureColor.rgb, textureColor.a);
+		return;
+	}
 
 	vec3 Normal = normalize(FragNormal);
 	vec3 lightDir = normalize(lightPos - FragPos);
@@ -34,7 +40,7 @@ void main()
 	float ambientStrength = 0.3;
 	vec3 ambient = ambientStrength * lightColor;
 	
-	vec3 result = ((diffuse + ambient + specular) * textureColor);
+	vec3 result = ((diffuse + ambient + specular) * textureColor.rgb);
 
 	FragColor = vec4(result, 1.0);
 }
