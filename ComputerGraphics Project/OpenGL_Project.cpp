@@ -3,7 +3,7 @@
 #include"Camera.h"
 #include"Mesh.h"
 #include"Texture.h"
-#include"Character.h"
+#include"Font.h"
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "glew32.lib")
@@ -83,6 +83,7 @@ private:
 namespace {
 	Shader shader;
 	Texture ak47Text, floorText, bulletText;
+	Font font;
 
 	bool timer = true;
 	double fps = 60;
@@ -181,7 +182,7 @@ void OpenGL::startPractice()
 	ak47Text = Texture("image\\ak47.png");
 	floorText = Texture("image\\stonefloor.png");
 	bulletText = Texture("image\\bullet.png");
-	init("C:\\Windows\\Fonts\\HMKMRHD.TTF");
+	font = Font("C:\\Windows\\Fonts\\HMKMRHD.TTF");
 
 	EnableState(GL_DEPTH_TEST);
 	EnableState(GL_CULL_FACE);
@@ -238,8 +239,8 @@ void OpenGL::rendering() {
 
 	glDisable(GL_DEPTH_TEST);
 
-	if(reload) RenderText(shader, ascii_to_u32("reloading..."), 0, 50, 0.5, glm::vec3(1.0f, 1.0f, 1.0f));
-	RenderText(shader, ascii_to_u32(std::to_string(magazine)), 0, 0, 1, glm::vec3(1.0f, 1.0f, 1.0f));
+	if(reload) font.RenderText(shader, ascii_to_u32("reloading..."), 0, 50, 0.5, glm::vec3(1.0f, 1.0f, 1.0f));
+	font.RenderText(shader, ascii_to_u32(std::to_string(magazine)), 0, 0, 1, glm::vec3(1.0f, 1.0f, 1.0f));
 
 
 	glEnable(GL_DEPTH_TEST);

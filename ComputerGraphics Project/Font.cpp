@@ -9,27 +9,85 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include"Shader.h"
-#include"Character.h"
+#include"Font.h"
 
-std::map<char32_t, Character> Characters;
 
-FT_Library ft;
-FT_Face face;
-int init(std::string_view path) {
+Font::Font(std::string_view path) {
+	init(path);
+}
+Font& Font::operator=(Font&& other) noexcept
+{
+	if (this != &other) {
+		ft = std::move(other.ft);
+		face = std::move(other.face);
+		fPath = std::move(other.fPath);
+		Characters = std::move(other.Characters);
+		other.ft = nullptr;
+		other.face = nullptr;
+		other.fPath = "";
+		other.Characters.clear();
+	}
+	return *this;
+}
+
+Font::~Font() {
+	FT_Done_Face(face);
+	FT_Done_FreeType(ft);
+}
+
+void Font::RenderText(const Shader& shader, const std::u32string& text, float x, float y, float scale, glm::vec3 color) {
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "outColor"), 1, glm::value_ptr(color));
+	glUniform1i(glGetUniformLocation(shader.GetShaderID(), "isText"), true);
+	glActiveTexture(GL_TEXTURE0);
+
+	for (char32_t c : text) {
+		Character ch = GetOrLoadCharacter(c);
+
+		float xpos = x + ch.Bearing.x * scale;
+		float ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
+		float w = ch.Size.x * scale;
+		float h = ch.Size.y * scale;
+
+		// 공백 문자가 아닐 때만 사각형 그리기
+		if (ch.TextureID != 0 && w > 0 && h > 0) {
+			float vertices[] = {
+				 xpos,     ypos + h,0.0f, 0.0f,0.0f,0.0f, 0.0f,0.0f,
+				 xpos,     ypos,    0.0f, 0.0f,0.0f,0.0f, 0.0f,1.0f,
+				 xpos + w, ypos,    0.0f, 0.0f,0.0f,0.0f, 1.0f,1.0f,
+
+				 xpos,     ypos + h, 0.0f, 0.0f,0.0f,0.0f, 0.0f,0.0f,
+				 xpos + w, ypos,     0.0f, 0.0f,0.0f,0.0f, 1.0f,1.0f,
+				 xpos + w, ypos + h, 0.0f, 0.0f,0.0f,0.0f, 1.0f,0.0f
+			};
+
+			glBindTexture(GL_TEXTURE_2D, ch.TextureID);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+
+		// 다음 글자 위치로 커서 이동
+		x += (ch.Advance >> 6) * scale;
+	}
+	glDisable(GL_BLEND);
+}
+void Font::init(std::string_view path) {
 	if (FT_Init_FreeType(&ft)) {
 		std::cerr << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
-		return -1;
 	}
 	// Windows 기준 맑은 고딕 폰트 경로 예시
 	if (FT_New_Face(ft, path.data(), 0, &face)) {
 		std::cerr << "ERROR::FREETYPE: Failed to load font" << std::endl;
-		return -1;
 	}
 
 	FT_Set_Pixel_Sizes(face, 0, 50);
-	return 0;
+	fPath = path;
 }
-Character GetOrLoadCharacter(char32_t c) {
+
+Character Font::GetOrLoadCharacter(char32_t c) {
 	// 이미 맵에 캐싱되어 있다면 즉시 반환
 	if (Characters.find(c) != Characters.end()) {
 		return Characters[c];
@@ -73,43 +131,4 @@ Character GetOrLoadCharacter(char32_t c) {
 	// 맵에 저장 후 반환
 	Characters[c] = character;
 	return character;
-}
-void RenderText(const Shader& shader, const std::u32string& text, float x, float y, float scale, glm::vec3 color) {
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "outColor"), 1, glm::value_ptr(color));
-	glUniform1i(glGetUniformLocation(shader.GetShaderID(), "isText"), true);
-	glActiveTexture(GL_TEXTURE0);
-
-	for (char32_t c : text) {
-		Character ch = GetOrLoadCharacter(c);
-
-		float xpos = x + ch.Bearing.x * scale;
-		float ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
-		float w = ch.Size.x * scale;
-		float h = ch.Size.y * scale;
-
-		// 공백 문자가 아닐 때만 사각형 그리기
-		if (ch.TextureID != 0 && w > 0 && h > 0) {
-			float vertices[] = {
-				 xpos,     ypos + h,0.0f, 0.0f,0.0f,0.0f, 0.0f,0.0f,
-				 xpos,     ypos,    0.0f, 0.0f,0.0f,0.0f, 0.0f,1.0f,
-				 xpos + w, ypos,    0.0f, 0.0f,0.0f,0.0f, 1.0f,1.0f,
-
-				 xpos,     ypos + h, 0.0f, 0.0f,0.0f,0.0f, 0.0f,0.0f,
-				 xpos + w, ypos,     0.0f, 0.0f,0.0f,0.0f, 1.0f,1.0f,
-				 xpos + w, ypos + h, 0.0f, 0.0f,0.0f,0.0f, 1.0f,0.0f
-			};
-
-			glBindTexture(GL_TEXTURE_2D, ch.TextureID);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-		}
-
-		// 다음 글자 위치로 커서 이동
-		x += (ch.Advance >> 6) * scale;
-	}
-	glDisable(GL_BLEND);
 }
