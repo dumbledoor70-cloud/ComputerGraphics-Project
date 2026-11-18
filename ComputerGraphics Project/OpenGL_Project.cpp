@@ -271,6 +271,10 @@ void OpenGL::Timer(double time)
 			bullets.push_back(Bullet(getAk47pos(pCamera->eye, glm::vec3(0.0f, 0.255f, 2.5f)), pCamera->getFront()));
 		}
 		else {
+			if (not reload and magazine == 0) {
+				reload = true;
+				reloadFirstTime = glfwGetTime();
+			}
 			aniPos += glm::vec3(0.0f, 0.0f, 0.05f);
 			if (aniPos.z >= 0.0f) aniPos = glm::vec3();
 		}
