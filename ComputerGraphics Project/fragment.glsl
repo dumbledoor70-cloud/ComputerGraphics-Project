@@ -8,7 +8,7 @@ out vec4 FragColor;
 
 uniform vec3 outColor;
 uniform vec3 lightColor;
-uniform vec3 lightPos;
+uniform vec3 lightVec;
 uniform vec3 ViewPos;
 uniform bool isText;
 
@@ -24,7 +24,7 @@ void main()
 	}
 
 	vec3 Normal = normalize(FragNormal);
-	vec3 lightDir = normalize(lightPos - FragPos);
+	vec3 lightDir = lightVec;
 	vec3 ViewDir = normalize(ViewPos - FragPos);
 
 

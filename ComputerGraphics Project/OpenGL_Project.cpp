@@ -69,9 +69,7 @@ class Bullet : public Model {
 public:
 	Bullet(glm::vec3 pos, glm::vec3 dir)
 		: Model("object\\Sphere.obj", pos, glm::vec3(0.05f), glm::vec3(0.7f)), direct{dir}
-	{
-
-	}
+	{}
 	void update() {
 		move(direct * 0.5f);
 	}
@@ -91,7 +89,7 @@ namespace {
 
 	bool isPerspective = true;
 
-	glm::vec3 lightPos = glm::vec3(0.0f, 0.0f, 0.0f);
+	glm::vec3 lightVec = glm::normalize(glm::vec3(1.0f, 1.0f, 0.0f));
 
 	Model ak47;
 	glm::vec3 aniPos = glm::vec3();
@@ -172,8 +170,6 @@ void OpenGL::SetBuffer()
 
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
-	
 }
 
 void OpenGL::startPractice()
@@ -182,13 +178,12 @@ void OpenGL::startPractice()
 	ak47Text = Texture("image\\ak47.png");
 	floorText = Texture("image\\stonefloor.png");
 	bulletText = Texture("image\\bullet.png");
-	font = Font("C:\\Windows\\Fonts\\HMKMRHD.TTF");
+	font = Font("C:\\Windows\\Fonts\\HMKMRHD.TTF"); 
 
 	EnableState(GL_DEPTH_TEST);
 	EnableState(GL_CULL_FACE);
 	pCamera = std::make_unique<Camera>(Camera(glm::vec3(0.0, 4.0, 0.0)));
 
-	lightPos = glm::vec3(0.0f, 5.0f, 0.0f);
 	ak47 = Model("Object\\ak47.obj", pCamera->eye + pos, glm::vec3(1.0f));
 }
 
@@ -212,8 +207,8 @@ void OpenGL::rendering() {
 	glActiveTexture(GL_TEXTURE0);
 
 	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "viewPos"), 1, glm::value_ptr(pCamera->eye));
-	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightColor"), 1, glm::value_ptr(glm::vec3(1.0f)));
-	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightPos"), 1, glm::value_ptr(lightPos));
+	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightColor"), 1, glm::value_ptr(glm::vec3(0.5f)));
+	glUniform3fv(glGetUniformLocation(shader.GetShaderID(), "lightVec"), 1, glm::value_ptr(lightVec));
 	glUniform1i(glGetUniformLocation(shader.GetShaderID(), "isText"), false);
 
 	glUniformMatrix4fv(glGetUniformLocation(shader.GetShaderID(), "projection"), 1, GL_FALSE, glm::value_ptr(projection));
