@@ -71,7 +71,7 @@ public:
 		: Model("object\\Sphere.obj", pos, glm::vec3(0.05f), glm::vec3(0.7f)), direct{dir}
 	{}
 	void update() {
-		move(direct * 0.5f);
+		move(direct);
 	}
 private:
 	glm::vec3 direct;
@@ -101,7 +101,9 @@ namespace {
 	double lastX, lastY;
 
 	float frontState, leftState;
-	constexpr float meterpersec = 1.44f;
+	constexpr float meterpersec = 5.56f;
+	constexpr float pixelpermeter = 120/1000.f;
+	constexpr float pixelpersec = pixelpermeter * meterpersec;
 
 	// 점프 구현하기
 	bool isJump = false;
@@ -235,7 +237,7 @@ void OpenGL::rendering() {
 	glDisable(GL_DEPTH_TEST);
 
 	if(reload) font.RenderText(shader, ascii_to_u32("reloading..."), 0, 50, 0.5, glm::vec3(1.0f, 1.0f, 1.0f));
-	font.RenderText(shader, ascii_to_u32(std::to_string(magazine)), 0, 0, 1, glm::vec3(1.0f, 1.0f, 1.0f));
+	font.RenderText(shader, ascii_to_u32("ammo: " + std::to_string(magazine)+ "/30"), 0, 0, 0.5, glm::vec3(1.0f, 1.0f, 1.0f));
 
 
 	glEnable(GL_DEPTH_TEST);
@@ -330,28 +332,28 @@ void OpenGL::keyboardCallback(GLFWwindow* window, int key, int scancode, int act
 		break;
 	case GLFW_KEY_W:
 		if (action == GLFW_PRESS)
-			frontState += 1.0f;
+			frontState += pixelpersec;
 		if (action == GLFW_RELEASE)
-			frontState -= 1.0f;
+			frontState -= pixelpersec;
 			
 		break;
 	case GLFW_KEY_A:
 		if (action == GLFW_PRESS)
-			leftState += meterpersec;
+			leftState += pixelpersec;
 		if (action == GLFW_RELEASE)
-			leftState -= meterpersec;
+			leftState -= pixelpersec;
 		break;
 	case GLFW_KEY_S:
 		if (action == GLFW_PRESS)
-			frontState -= meterpersec;
+			frontState -= pixelpersec;
 		if (action == GLFW_RELEASE)
-			frontState += meterpersec;
+			frontState += pixelpersec;
 		break;
 	case GLFW_KEY_D:
 		if (action == GLFW_PRESS)
-			leftState -= meterpersec;
+			leftState -= pixelpersec;
 		if (action == GLFW_RELEASE)
-			leftState += meterpersec;
+			leftState += pixelpersec;
 		break;
 	case GLFW_KEY_F1:
 		pCamera->move(glm::vec3(0.1f, 0.0f, 0.0f));
