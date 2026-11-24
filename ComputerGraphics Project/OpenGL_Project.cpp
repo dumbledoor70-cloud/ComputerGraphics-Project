@@ -12,7 +12,7 @@
 #pragma comment(lib, "freetype.lib")
 
 
-class Model {
+class Model { 
 public:
 	Model() = default;
 	Model(std::string_view filename, glm::vec3 pos = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 sz = glm::vec3(1.0f), glm::vec3 Color = glm::vec3(0.5f)) : 
